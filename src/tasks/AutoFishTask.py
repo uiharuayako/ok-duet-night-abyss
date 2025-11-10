@@ -16,7 +16,7 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = "自动钓鱼"
-        self.description = "无悠闲全自动钓鱼 (作者: B站无敌大蜜瓜)，如果识别不到鱼条修改配置降低面积要求"
+        self.description = "无悠闲全自动钓鱼 (原作者: B站无敌大蜜瓜)，如果识别不到鱼条修改配置降低面积要求"
 
         # 默认配置（会被 configs/AutoFishTask.json 覆盖）
         self.default_config.update(
@@ -213,6 +213,13 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
             logger.info("检测到fish_chance（授渔以鱼）-> 按下E键使用授渔以鱼抛竿")
             self.stats["chance_used"] = self.stats.get("chance_used", 0) + 1
             self.info_set("授渔以鱼", self.stats["chance_used"])
+            # 上一轮的鱼被用作鱼饵，不计入轮数
+            if self.stats["rounds_completed"] > 0:
+                self.stats["rounds_completed"] -= 1
+                self.info_set("完成轮数", self.stats["rounds_completed"])
+                logger.info(
+                    f"上一轮的鱼作为鱼饵，轮数调整为: {self.stats['rounds_completed']}"
+                )
             self.send_key("e", down_time=0.06)
         elif not has_cast_icon:
             logger.info("开始阶段未找到fish_cast，尝试按空格抛竿并等待fish_bite出现")
@@ -279,8 +286,6 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
 
         # 硬编码的常量
         BAR_MISSING_TIMEOUT = 2.5  # 鱼条丢失超时
-        BAR_STATIC_TIMEOUT = 2.5  # 鱼条静止超时
-        MOVE_THRESHOLD = 5  # 静止判定阈值（像素）
         MERGE_GRACE_SECONDS = 0.20  # 合并宽限时间
 
         # 运行时状态
@@ -289,8 +294,6 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
         last_known_icon_y_relative = 0.0
 
         bar_missing_start_time = None
-        last_bar_position = None
-        last_bar_move_time = time.monotonic()
         merge_start_time = None
 
         def set_hold(target_hold: bool):
@@ -329,27 +332,6 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
                         return True
                 else:
                     bar_missing_start_time = None
-
-                # 检查鱼条是否静止
-                if has_bar:
-                    if last_bar_position is None:
-                        last_bar_position = bar_center
-                        last_bar_move_time = now
-                    else:
-                        distance = (
-                            (bar_center[0] - last_bar_position[0]) ** 2
-                            + (bar_center[1] - last_bar_position[1]) ** 2
-                        ) ** 0.5
-                        if distance > MOVE_THRESHOLD:
-                            last_bar_position = bar_center
-                            last_bar_move_time = now
-                        elif now - last_bar_move_time >= BAR_STATIC_TIMEOUT:
-                            logger.info(
-                                f"鱼条静止超过 {BAR_STATIC_TIMEOUT}s -> 溜鱼结束"
-                            )
-                            return True
-                else:
-                    last_bar_position = None
 
                 # 主控制逻辑：两层控制系统
                 if has_bar and bar_rect:
@@ -473,24 +455,36 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
         # main loop: start -> fight -> end
         while True:
             try:
-                # 检查是否达到目标轮数
+                # 检查是否达到目标轮数（在phase_start之前检查，因为可能会遇到授渔以鱼导致轮数减少）
                 if max_rounds > 0 and self.stats["rounds_completed"] >= max_rounds:
-                    elapsed_time = time.time() - self.stats["start_time"]
-                    hours = int(elapsed_time // 3600)
-                    minutes = int((elapsed_time % 3600) // 60)
-                    seconds = int(elapsed_time % 60)
+                    # 需要再执行一次phase_start来检查是否有授渔以鱼
+                    # 如果有授渔以鱼，上一轮不计数，需要继续
 
-                    logger.info("=" * 50)
-                    logger.info(
-                        f"✓ 已完成目标轮数: {self.stats['rounds_completed']} 轮"
-                    )
-                    logger.info(f"✓ 总耗时: {hours:02d}:{minutes:02d}:{seconds:02d}")
-                    if self.stats["rounds_completed"] > 0:
-                        avg_time = elapsed_time / self.stats["rounds_completed"]
-                        logger.info(f"✓ 平均每轮: {avg_time:.1f} 秒")
-                    logger.info("自动钓鱼任务完成！")
-                    logger.info("=" * 50)
-                    break
+                    # 临时检查授渔以鱼
+                    has_chance_icon, _ = self.find_fish_chance()
+                    if has_chance_icon:
+                        logger.info("检测到授渔以鱼，上一轮不计数，继续钓鱼...")
+                        # 轮数会在phase_start中自动减1
+                    else:
+                        # 确实完成了目标轮数
+                        elapsed_time = time.time() - self.stats["start_time"]
+                        hours = int(elapsed_time // 3600)
+                        minutes = int((elapsed_time % 3600) // 60)
+                        seconds = int(elapsed_time % 60)
+
+                        logger.info("=" * 50)
+                        logger.info(
+                            f"✓ 已完成目标轮数: {self.stats['rounds_completed']} 轮"
+                        )
+                        logger.info(
+                            f"✓ 总耗时: {hours:02d}:{minutes:02d}:{seconds:02d}"
+                        )
+                        if self.stats["rounds_completed"] > 0:
+                            avg_time = elapsed_time / self.stats["rounds_completed"]
+                            logger.info(f"✓ 平均每轮: {avg_time:.1f} 秒")
+                        logger.info("自动钓鱼任务完成！")
+                        logger.info("=" * 50)
+                        break
 
                 if not self.phase_start():
                     self.sleep(1.0)
