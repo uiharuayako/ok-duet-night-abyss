@@ -1,5 +1,6 @@
 from ok import TriggerTask, Logger, og
 from src.tasks.BaseCombatTask import BaseCombatTask, CharDeadException
+from src.tasks.BaseListenerTask import BaseListenerTask
 
 from pynput import mouse
 
@@ -12,11 +13,12 @@ class TriggerDeactivateException(Exception):
     pass
 
 
-class AutoAimTask(BaseCombatTask, TriggerTask):
+class AutoAimTask(BaseListenerTask, BaseCombatTask, TriggerTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = "自动花序弓蓄力瞄准"
         self.description = "可使用鼠标右键或侧键主动激活，运行中可使用右键或左键打断"
+        self.setup_listener_config()
         self.default_config.update(
             {
                 "激活键": "right",
@@ -24,13 +26,9 @@ class AutoAimTask(BaseCombatTask, TriggerTask):
                 "间隔时间": 0.50,
             }
         )
-        self.config_type["激活键"] = {
-            "type": "drop_down",
-            "options": ["right", "x1", "x2"],
-        }
+        self.config_type["激活键"]["options"].insert(0, "right")
         self.config_description.update(
             {
-                "激活键": "鼠标右键或侧键激活",
                 "按下时间": "右键按住多久(秒)",
                 "间隔时间": "右键释放后等待多久(秒)",
             }
@@ -39,14 +37,10 @@ class AutoAimTask(BaseCombatTask, TriggerTask):
         self.signal = False
         self.signal_interrupt = False
         self.is_down = False
-        self.connected = False
 
     def disable(self):
         """禁用任务时，断开信号连接。"""
-        if self.connected:
-            logger.debug("disconnect on_global_click")
-            og.my_app.clicked.disconnect(self.on_global_click)
-            self.connected = False
+        self.try_disconnect_listener()
         return super().disable()
 
     def reset(self):
@@ -55,9 +49,7 @@ class AutoAimTask(BaseCombatTask, TriggerTask):
         self.signal_interrupt = False
 
     def run(self):
-        if not self.connected:
-            self.connected = True
-            og.my_app.clicked.connect(self.on_global_click)
+        self.try_connect_listener()
 
         if self.signal:
             self.signal = False
@@ -112,7 +104,9 @@ class AutoAimTask(BaseCombatTask, TriggerTask):
     def on_global_click(self, x, y, button, pressed):
         if self._executor.paused:
             return
-
+        if self.config.get('激活键', 'x2') == '使用键盘':
+            if button not in (mouse.Button.left, mouse.Button.right):
+                return
         # 根据配置获取激活键
         activate_key = self.config.get("激活键", "right")
         if activate_key == "right":
@@ -131,3 +125,11 @@ class AutoAimTask(BaseCombatTask, TriggerTask):
                 button == mouse.Button.right or button == mouse.Button.left
             ):
                 self.signal_interrupt = True
+
+    def on_global_press(self, key):
+        if self._executor.paused or self.config.get('激活键', 'x2') != '使用键盘':
+            return
+        lower = self.config.get('键盘', 'ctrl_r').lower()
+        hot_key = self.normalize_hotkey(lower)
+        if self.key_equal(key, hot_key):
+            self.signal = True

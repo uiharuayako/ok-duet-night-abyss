@@ -1,41 +1,33 @@
 from ok import TriggerTask, Logger, og
 from src.tasks.BaseCombatTask import BaseCombatTask, NotInCombatException, CharDeadException
+from src.tasks.BaseListenerTask import BaseListenerTask
 
 from pynput import mouse
 
 logger = Logger.get_logger(__name__)
 
 
-class AutoCombatTask(BaseCombatTask, TriggerTask):
+class AutoCombatTask(BaseListenerTask, BaseCombatTask, TriggerTask):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = "自动战斗"
         self.description = "需使用鼠标侧键主动激活"
+        self.setup_listener_config()
         self.default_config.update({
-            "激活键": "x2",
             "技能": "普攻",
             "释放间隔": 0.1,
         })
-        self.config_type["激活键"] = {"type": "drop_down", "options": ["x1", "x2"]}
         self.config_type["技能"] = {"type": "drop_down", "options": ["普攻", "战技", "终结技"]}
-        self.config_description.update({
-            "激活键": "鼠标侧键",
-        })
         self.connected = False
 
     def disable(self):
         """禁用任务时，断开信号连接。"""
-        if self.connected:
-            logger.debug("disconnect on_global_click")
-            og.my_app.clicked.disconnect(self.on_global_click)
-            self.connected = False
+        self.try_disconnect_listener()
         return super().disable()
 
     def run(self):
-        if not self.connected:
-            self.connected = True
-            og.my_app.clicked.connect(self.on_global_click)
+        self.try_connect_listener()
 
         ret = False
         while self.in_combat():
@@ -67,9 +59,19 @@ class AutoCombatTask(BaseCombatTask, TriggerTask):
     def on_global_click(self, x, y, button, pressed):
         if self._executor.paused:
             return
+        if self.config.get('激活键', 'x2') == '使用键盘':
+            return
         if self.config.get("激活键", "x2") == "x1":
             btn = mouse.Button.x1
         else:
             btn = mouse.Button.x2
         if pressed and button == btn:
+            self.manual_in_combat = not self.manual_in_combat
+
+    def on_global_press(self, key):
+        if self._executor.paused or self.config.get('激活键', 'x2') != '使用键盘':
+            return
+        lower = self.config.get('键盘', 'ctrl_r').lower()
+        hot_key = self.normalize_hotkey(lower)
+        if self.key_equal(key, hot_key):
             self.manual_in_combat = not self.manual_in_combat

@@ -29,8 +29,9 @@ class Auto70jjbTask(DNAOneTimeTask, CommissionsTask, BaseCombatTask):
             '波次超时时间': '超时后将重启',
         }
         self.setup_commission_config()
-        self.default_config.pop("启用自动穿引共鸣", None)
-        self.default_config.pop("自动选择首个密函和密函奖励", None)
+        keys_to_remove = ["启用自动穿引共鸣", "自动选择首个密函和密函奖励"]
+        for key in keys_to_remove:
+            self.default_config.pop(key, None)
         self.name = "自动70级皎皎币本"
         self.action_timeout = 10
         self.quick_move_task = QuickMoveTask(self)

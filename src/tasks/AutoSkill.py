@@ -16,19 +16,19 @@ class AutoSkill(DNAOneTimeTask, CommissionsTask):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.icon = FluentIcon.FLAG
+        self.setup_commission_config()
+        # 移除该任务不需要的配置项
+        keys_to_remove = ["委托手册", "启用自动穿引共鸣", "自动选择首个密函和密函奖励"]
+        for key in keys_to_remove:
+            self.default_config.pop(key, None)
+
         self.default_config.update({
-            '使用技能': '不使用',
-            '技能释放频率': 5,
-            '任务超时时间': 120,
             '主画面侦测': True,
-            '发出声音提醒': True,
+            '任务超时时间': 120,
         })
-        self.config_type['使用技能'] = {'type': 'drop_down', 'options': ['不使用', '战技', '终结技']}
         self.config_description = {
-            '技能释放频率': '毎几秒释放一次技能',
             '主画面侦测': '如果不在可操控角色的画面则结束任务',
             '任务超时时间': '放弃任务前等待的秒数',
-            '发出声音提醒': '在需要时发出声音提醒',
         }
         
         self.name = "自动释放技能"

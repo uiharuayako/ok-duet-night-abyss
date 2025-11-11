@@ -1,9 +1,23 @@
 from PySide6.QtCore import QObject, Signal
 from pynput import mouse, keyboard
-
+from qfluentwidgets import DoubleSpinBox
+from PySide6.QtWidgets import QApplication
 from ok import Logger, og
 
 logger = Logger.get_logger(__name__)
+
+# --- 猴子补丁 ---
+# 修改 DoubleSpinBox，使其默认拥有一个更大的最大值
+
+# 1. 保存原始的 __init__ 方法
+_original_init = DoubleSpinBox.__init__
+
+def _new_init(self, *args, **kwargs):
+    _original_init(self, *args, **kwargs)  # 2. 调用原始的初始化方法
+    self.setMaximum(99999.0)              # 3. 设置我们想要的新最大值
+
+DoubleSpinBox.__init__ = _new_init  # 4. 用我们的新方法替换原始方法
+# --- 猴子补丁 ---
 
 
 class Globals(QObject):

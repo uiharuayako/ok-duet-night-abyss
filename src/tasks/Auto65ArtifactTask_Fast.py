@@ -40,8 +40,9 @@ class Auto65ArtifactTask_Fast(DNAOneTimeTask, CommissionsTask, BaseCombatTask):
         self.setup_commission_config()
 
         # 移除不需要的配置项
-        self.default_config.pop("启用自动穿引共鸣", None)
-        self.default_config.pop("自动选择首个密函和密函奖励", None)
+        keys_to_remove = ["启用自动穿引共鸣", "自动选择首个密函和密函奖励"]
+        for key in keys_to_remove:
+            self.default_config.pop(key, None)
 
         # 任务名称（在UI中显示）
         self.name = "自动30/65级魔之楔本"  # 修改为你的副本名称
