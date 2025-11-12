@@ -67,7 +67,7 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
     def find_fish_cast(self) -> tuple[bool, tuple]:
         """查找 fish_cast 图标（抛竿/收杆），返回 (found, center)"""
         CAST_THRESHOLD = 0.8  # fish_cast 匹配阈值
-        box = self.find_one("fish_cast", threshold=CAST_THRESHOLD)
+        box = self.find_one("fish_cast", threshold=CAST_THRESHOLD) or self.find_one("fish_ease", threshold=CAST_THRESHOLD)
         if box:
             return True, (box.x + box.width // 2, box.y + box.height // 2)
         return False, (0, 0)
