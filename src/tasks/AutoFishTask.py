@@ -51,7 +51,6 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
         )
 
         # runtime
-        self.connected = False
         self.stats = {
             "rounds_completed": 0,
             "total_time": 0.0,
@@ -69,6 +68,15 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
         except Exception as e:
             logger.error("AutoFishTask error", e)
             raise
+
+    def init(self):
+        self.stats = {
+            "rounds_completed": 0,
+            "total_time": 0.0,
+            "start_time": None,
+            "current_phase": "准备中",
+            "chance_used": 0,  # 授渔以鱼使用次数
+        }
 
     def find_fish_cast(self) -> tuple[bool, tuple]:
         """查找 fish_cast 图标（抛竿/收杆），返回 (found, center)"""
@@ -103,7 +111,7 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
             return True, (box.x + box.width // 2, box.y + box.height // 2)
         return False, (0, 0)
 
-    def find_bar_and_fish_by_area(self, roi_ref):
+    def find_bar_and_fish_by_area(self):
         """基于 ROI 找到鱼条和鱼标的区域与面积
 
         返回：((has_bar, bar_center, bar_rect), (has_icon, icon_center, icon_rect))
@@ -112,28 +120,27 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
         cfg = self.config
 
         # 获取 ROI 区域
-        box = self.box_of_screen_scaled(
-            1920, 1080, roi_ref[0], roi_ref[1], roi_ref[2], roi_ref[3], name="fish_roi"
-        )
+        box = self.box_of_screen_scaled(1920, 1080, 1620, 325, 1645, 725, name="fish_roi")
 
         try:
-            frame = self.frame
-            frame_height, frame_width = frame.shape[:2]
-            res_ratio = frame_height / 1080
+            # frame = self.frame
             # Box 对象使用 x, y, width, height 属性
-            box_x1, box_y1 = box.x, box.y
-            box_x2, box_y2 = box.x + box.width, box.y + box.height
-            box_x1 = max(0, min(box_x1, frame_width - 1))
-            box_y1 = max(0, min(box_y1, frame_height - 1))
-            box_x2 = max(box_x1 + 1, min(box_x2, frame_width))
-            box_y2 = max(box_y1 + 1, min(box_y2, frame_height))
-            roi_img = frame[box_y1:box_y2, box_x1:box_x2]
+            # box_x1, box_y1 = box.x, box.y
+            # box_x2, box_y2 = box.x + box.width, box.y + box.height
+            # box_x1 = max(0, min(box_x1, frame_width - 1))
+            # box_y1 = max(0, min(box_y1, frame_height - 1))
+            # box_x2 = max(box_x1 + 1, min(box_x2, frame_width))
+            # box_y2 = max(box_y1 + 1, min(box_y2, frame_height))
+            # roi_img = frame[box_y1:box_y2, box_x1:box_x2]
+            frame_height, _ = self.frame.shape[:2]
+            res_ratio = frame_height / 1080
+            roi_img = box.crop_frame(self.frame)
 
             # 转换为灰度图
             gray = cv2.cvtColor(roi_img, cv2.COLOR_BGR2GRAY)
 
             # 二值化：提取亮色区域（鱼条和图标都是白色/亮色）
-            _, scene_bin = cv2.threshold(gray, 220, 255, cv2.THRESH_BINARY)
+            _, scene_bin = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
 
             # 查找轮廓
             contours, _ = cv2.findContours(
@@ -151,7 +158,7 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
             blobs.sort(key=lambda b: b["area"], reverse=True)
             
             #Debug only
-            # output_img = frame[box_y1:box_y2, box_x1:box_x2].copy()
+            # output_img = roi_img.copy()
             # colors = [
             #     (0, 0, 255),     # 红
             #     (0, 255, 0),     # 绿
@@ -229,8 +236,8 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
             )
 
             return (has_bar, bar_center, bar_rect), (has_icon, icon_center, icon_rect)
-        except TaskDisabledException as e:
-            cv2.destroyAllWindows()
+        except TaskDisabledException:
+            # cv2.destroyAllWindows()
             raise TaskDisabledException
         except Exception as e:
             logger.error(f"find_bar_and_fish_by_area error: {e}")
@@ -373,11 +380,7 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
                     logger.info("溜鱼超时")
                     return False
 
-                (has_bar, bar_center, bar_rect), (has_icon, icon_center, icon_rect) = (
-                    self.find_bar_and_fish_by_area(
-                        cfg.get("ROI_C_AND_D", self.roi_fish_bar_and_icon)
-                    )
-                )
+                (has_bar, bar_center, bar_rect), (has_icon, icon_center, icon_rect) = self.find_bar_and_fish_by_area()
 
                 # 记录鱼标相对位置（用于合并处理）
                 if has_bar and has_icon:
@@ -448,16 +451,11 @@ class AutoFishTask(DNAOneTimeTask, BaseDNATask):
 
                 self.next_frame()
 
-        except TaskDisabledException as e:
+        except TaskDisabledException:
+            self.send_key_up("space")
             raise TaskDisabledException
         finally:
-            # 释放按键
-            try:
-                self.send_key_up("space")
-            except TaskDisabledException as e:
-                raise TaskDisabledException
-            except Exception:
-                pass
+            self.send_key_up("space")
 
     def phase_end(self) -> bool:
         cfg = self.config
