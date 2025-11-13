@@ -21,8 +21,10 @@ class AutoExpulsion(DNAOneTimeTask, CommissionsTask, BaseCombatTask):
         self.group_icon = FluentIcon.CAFE
 
         self.default_config.update({
-            '随机游走': False,
-            '刷几次': 999,
+            "随机游走": False,
+            "刷几次": 999,
+            "挂机模式": "开局重置角色位置",
+            "开局向前走": 0.0
         })
 
         self.setup_commission_config()
@@ -31,8 +33,13 @@ class AutoExpulsion(DNAOneTimeTask, CommissionsTask, BaseCombatTask):
             self.default_config.pop(key, None)
 
         self.config_description.update({
-            '随机游走': '是否在任务中随机移动',
+            "随机游走": "是否在任务中随机移动",
+            "开局向前走": "开局向前走几秒"
         })
+        self.config_type["挂机模式"] = {
+            "type": "drop_down",
+            "options": ["开局重置角色位置", "开局向前走"],
+        }
 
         self.default_config.pop("启用自动穿引共鸣", None)
         self.action_timeout = 10
@@ -88,16 +95,17 @@ class AutoExpulsion(DNAOneTimeTask, CommissionsTask, BaseCombatTask):
                 self.log_info("任务开始")
                 self.sleep(2)
                 _start_time = 0
-                _skill_time = 0
             self.sleep(0.2)
 
     def move_on_begin(self):
-        # 复位方案
-        self.reset_and_transport()
-        # 防卡墙
-        self.send_key_down("w")
-        self.sleep(0.5)
-        self.send_key_up("w")
+        if self.config.get("挂机模式") == "开局重置角色位置":
+            # 复位方案
+            self.reset_and_transport()
+            # 防卡墙
+            self.send_key("w",down_time=0.5)
+        elif self.config.get("挂机模式") == "开局向前走":
+            if (walk_sec := self.config.get("开局向前走", 0)) > 0:
+                self.send_key("w", down_time=walk_sec)
 
     def random_walk(self, last_time):
         duration = 1
@@ -108,4 +116,3 @@ class AutoExpulsion(DNAOneTimeTask, CommissionsTask, BaseCombatTask):
                 self.send_key(direction, down_time=duration)
                 return time.time()
         return last_time
-
