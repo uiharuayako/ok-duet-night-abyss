@@ -22,17 +22,20 @@ class AutoExploration_Fast(DNAOneTimeTask, CommissionsTask, BaseCombatTask):
         self.name = "自动探险/无尽"
         self.description = "需要巧手可后台全自动，不要使用小体型自机"
         self.group_name = "全自动"
+        self.default_config.update({
+            '轮次': 3,
+            '超时时间': 120,
+            '解密失败自动重开': True,
+        })
+        self.config_description.update({
+            '轮次': '打几个轮次',
+            '超时时间': '超时后将发出提示',
+            '解密失败自动重开': '不重开时会发出声音提示',
+        })
         self.setup_commission_config()
         keys_to_remove = ["启用自动穿引共鸣"]
         for key in keys_to_remove:
             self.default_config.pop(key, None)
-        self.default_config.update({
-            '解密失败自动重开': True,
-        })
-        self.config_description.update({
-            '解密失败自动重开': '不重开时会发出声音提示',
-        })
-
         self.action_timeout = DEFAULT_ACTION_TIMEOUT
         self.quick_move_task = QuickMoveTask(self)
 
