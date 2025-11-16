@@ -27,6 +27,7 @@ class AutoPuzzleTask(BaseDNATask, TriggerTask):
         # self.template_shape = None
         # self.puzzle_boxes = {}
         # self.detection_threshold = 0.85  # 固定检测阈值
+        self.puzzle_solved = False
         self._last_no_puzzle_log = 0
         # 在初始化时加载路径数据
         self.puzzle_paths = self._load_puzzle_paths()
@@ -54,12 +55,15 @@ class AutoPuzzleTask(BaseDNATask, TriggerTask):
         # if self.template_shape != self.frame.shape[:2]:
         #     self.init_boxes()
         #     logger.info("AutoPuzzleTask 已初始化检测区域")
-
+        self.puzzle_solved = False
         if self.scene.in_team(self.in_team_and_world):
             return
 
         # 扫描屏幕查找所有拼图
         self.scan_puzzles()
+
+    def is_puzzle_solved(self):
+        return self.puzzle_solved
 
     # def init_boxes(self):
     #     """初始化优化后的检测区域，适配所有 16:9 分辨率"""
@@ -138,6 +142,7 @@ class AutoPuzzleTask(BaseDNATask, TriggerTask):
             if now - self._last_no_puzzle_log > 5.0:
                 logger.debug("未检测到解密拼图")
                 self._last_no_puzzle_log = now
+        self.puzzle_solved = found_any
 
     def log_puzzle_info(self, box):
         """输出检测到的拼图信息"""
