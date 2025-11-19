@@ -428,3 +428,13 @@ msgstr "Leisurely Auto-Fishing (Original Author: Bilibili 无敌大蜜瓜)"
 
 msgid "自动避险"
 msgstr "Auto Hazard Avoidance"
+
+msgid "自动探险/无尽"
+msgstr "Auto Exploration/Endless"
+
+msgid "解密失败自动重开"
+msgstr "Automatically restart when decryption fails"
+
+msgid "不重开时会发出声音提示"
+msgstr "A sound prompt will be issued when No is selected."
+

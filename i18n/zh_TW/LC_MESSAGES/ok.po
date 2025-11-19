@@ -437,3 +437,12 @@ msgstr "閃避按鍵"
 
 msgid "HelixLeap Key"
 msgstr "螺旋飛躍按鍵"
+
+msgid "自动探险/无尽"
+msgstr "自動探險 / 無盡"
+
+msgid "解密失败自动重开"
+msgstr "解密失敗時自動重啟"
+
+msgid "不重开时会发出声音提示"
+msgstr "選否時會發出聲音提示"

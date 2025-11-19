@@ -21,7 +21,7 @@ class AutoExploration_Fast(DNAOneTimeTask, CommissionsTask, BaseCombatTask):
         self.icon = FluentIcon.FLAG
         self.group_icon = FluentIcon.CAFE
         self.name = "自动探险/无尽"
-        self.description = "需要巧手可后台全自动，不要使用小体型自机"
+        self.description = "全自动"
         self.group_name = "全自动"
         self.default_config.update({
             '轮次': 3,

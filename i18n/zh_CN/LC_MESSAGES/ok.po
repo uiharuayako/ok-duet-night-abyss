@@ -437,3 +437,132 @@ msgstr "闪避按键"
 
 msgid "HelixLeap Key"
 msgstr "螺旋飞跃按键"
+
+msgid "2"
+msgstr ""
+
+msgid "Auto"
+msgstr ""
+
+msgid "Auto Resize Game Window"
+msgstr ""
+
+msgid "Auto Start Game When App Starts"
+msgstr ""
+
+msgid "Basic Options"
+msgstr ""
+
+msgid "Diagnosis"
+msgstr ""
+
+msgid "Exit App when Game Exits"
+msgstr ""
+
+msgid "Increase Delay between Trigger Tasks to Reduce CPU/GPU Usage(Milliseconds)"
+msgstr ""
+
+msgid "Minimize Window to System Tray when Closing"
+msgstr ""
+
+msgid "Mute Game while in Background"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Operation"
+msgstr ""
+
+msgid "Performance Test"
+msgstr ""
+
+msgid "Trigger Interval"
+msgstr ""
+
+msgid "Use DirectML"
+msgstr ""
+
+msgid "Use GPU to Improve Performance"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "e"
+msgstr ""
+
+msgid "f"
+msgstr ""
+
+msgid "test"
+msgstr ""
+
+msgid "不重开时会发出声音提示"
+msgstr ""
+
+msgid ""
+"全自动80护送任务，搬运自emt，欢迎路径作者署名。\n"
+"需要使用水母主控，近战武器选择0精春玦戟。魔之楔配置为金色迅捷+5，紫色穿引共鸣，紫色迅捷蓄势+5，紫色迅捷坠击+5，不要携带其他魔之楔，面板攻速为1.67。\n"
+"设置中控制设置水平灵敏度和垂直灵敏度设置为1.0，默认镜头距离设置为1.3。确认好自身魔之楔和设置后展开下方配置点击我已阅读后运行"
+msgstr ""
+
+msgid "半自动 (只有基础操作)"
+msgstr ""
+
+msgid "启动转盘解迷"
+msgstr ""
+
+msgid "启动迷宫解迷"
+msgstr ""
+
+msgid "启用"
+msgstr ""
+
+msgid "完成几次护送任务后停止"
+msgstr ""
+
+msgid "必须勾选才能执行任务！"
+msgstr ""
+
+msgid "我已阅读注意事项并确认配置"
+msgstr ""
+
+msgid "武器突破"
+msgstr ""
+
+msgid "移动延迟（秒）"
+msgstr ""
+
+msgid "自动探险/无尽"
+msgstr ""
+
+msgid "自动解锁迷宫(无巧手)"
+msgstr ""
+
+msgid "自动识别并进行迷宫解密"
+msgstr ""
+
+msgid "自动轮盘机关"
+msgstr ""
+
+msgid "自动飞枪80护送（无需巧手）【需要游戏处于前台】"
+msgstr ""
+
+msgid "角色经验"
+msgstr ""
+
+msgid "解密失败自动重开"
+msgstr ""
+
+msgid "通用型半自动"
+msgstr ""
+
+msgid "随便搞的，基于2k写的其他分辨率要是有问题就不管了，有bug也不用反馈因为拿到巧手后就不维护了(狗头)"
+msgstr ""
+
+msgid "需要巧手可后台全自动，不要使用小体型自机"
+msgstr ""
+
+msgid "魔灵支援"
+msgstr ""

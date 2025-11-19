@@ -428,3 +428,12 @@ msgstr "Pesca Automática Relajada (Autor Original: Bilibili 无敌大蜜瓜)"
 
 msgid "自动避险"
 msgstr "Evitación Automática de Peligros"
+
+msgid "自动探险/无尽"
+msgstr "Aventura Automática / Infinito"
+
+msgid "解密失败自动重开"
+msgstr "Reinicio automático cuando falla el descifrado"
+
+msgid "不重开时会发出声音提示"
+msgstr "Se emitirá un sonido de aviso cuando se seleccione No"
