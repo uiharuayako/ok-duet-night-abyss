@@ -484,16 +484,16 @@ class BaseDNATask(BaseTask):
         # 判断设置中灵敏度开关是否打开
         if self.sensitivity_config['Game Sensitivity Switch']:
             # 获取设置中的游戏灵敏度
-            game_Xsensitivity = round(self.sensitivity_config['X-axis sensitivity'], 1)
-            game_Ysensitivity = round(self.sensitivity_config['Y-axis sensitivity'], 1)
+            game_Xsensitivity = self.sensitivity_config['X-axis sensitivity']
+            game_Ysensitivity = self.sensitivity_config['Y-axis sensitivity']
 
             # 判断和计算
             if original_Xsensitivity == game_Xsensitivity and original_Ysensitivity == game_Ysensitivity:
                 calculate_dx = dx
                 calculate_dy = dy
             else:
-                calculate_dx = dx / round(game_Xsensitivity / original_Xsensitivity, 10)
-                calculate_dy = dy / round(game_Ysensitivity / original_Ysensitivity, 10)
+                calculate_dx = round(dx / (game_Xsensitivity / original_Xsensitivity))
+                calculate_dy = round(dy / (game_Ysensitivity / original_Ysensitivity))
         else:
             calculate_dx = dx
             calculate_dy = dy
