@@ -589,32 +589,24 @@ class BaseDNATask(BaseTask):
         needs_resync = False
         _in_team = None
 
-        def sleep(timeout):
-            deadline = time.time() + timeout
-            while time.time() < deadline:
-                if self.executor.current_task is None or self.executor.exit_event.is_set():
-                    self.log_info("fidget action stopped")
-                    return
-                check_alt()
-                time.sleep(0.1)
-
-        def send_key_down(key):
+        def send_key_raw(key, is_down):
             interaction = self.executor.interaction
             vk_code = interaction.get_key_by_str(key)
-            interaction.post(win32con.WM_KEYDOWN, vk_code, interaction.lparam)
+            event = win32con.WM_KEYDOWN if is_down else win32con.WM_KEYUP
+            interaction.post(event, vk_code, interaction.lparam)
 
-        def send_key_up(key):
-            interaction = self.executor.interaction
-            vk_code = interaction.get_key_by_str(key)
-            interaction.post(win32con.WM_KEYUP, vk_code, interaction.lparam)
-
-        def send_key(key, down_time=0.02, after_sleep=0.0):
-            interaction = self.executor.interaction
-            vk_code = interaction.get_key_by_str(key)
-            interaction.post(win32con.WM_KEYDOWN, vk_code, interaction.lparam)
-            time.sleep(down_time)
-            interaction.post(win32con.WM_KEYUP, vk_code, interaction.lparam)
-            time.sleep(after_sleep)
+        def get_magic_sleep_time():
+            """
+            核心防检测逻辑：
+            生成针对 Lua 0.3s 量化刻度的随机时间。
+            目标刻度: 0.0s, 0.3s, 0.6s, 0.9s
+            """
+            return random.choice([
+                random.uniform(0.005, 0.02),
+                random.uniform(0.20, 0.28),
+                random.uniform(0.50, 0.58),
+                random.uniform(0.80, 0.88)
+            ])
 
         def in_team():
             nonlocal _in_team
@@ -625,77 +617,124 @@ class BaseDNATask(BaseTask):
                 _in_team = True
             return _in_team
 
-        def check_alt():
+        def check_alt_logic():
             nonlocal lalt_pressed, needs_resync, _in_team
+            
             if not self.afk_config.get("鼠标抖动", True):
                 return
+
             if self.hold_lalt:
                 if not lalt_pressed:
                     self.log_info("[LAlt保持] 激活: 按下 LAlt")
-                    send_key_down("lalt")
+                    send_key_raw("lalt", True)
                     time.sleep(0.1)
                     lalt_pressed = True
                 elif not needs_resync and lalt_pressed and not in_team():
+                    wait_time = get_magic_sleep_time()
+                    time.sleep(wait_time)
                     self.log_info("[LAlt保持] 暂停: 检测到不在队伍，暂时释放 LAlt")
                     needs_resync = True
-                    send_key_up("lalt")
+                    send_key_raw("lalt", False)
                 elif needs_resync and in_team():
                     self.log_info("[LAlt保持] 恢复: 检测到重回队伍，重新按下 LAlt")
                     needs_resync = False
-                    send_key_down("lalt")
+                    send_key_raw("lalt", True)
                 _in_team = None
             else:
                 if lalt_pressed:
                     self.log_info("[LAlt保持] 停止: 功能关闭，彻底释放 LAlt")
-                    send_key_up("lalt")
+                    send_key_raw("lalt", False)
                     lalt_pressed = False
                     needs_resync = False
 
-        def _fidget_action():
+        def perform_mouse_jitter(current_drift):
+            """执行鼠标微小抖动，返回更新后的漂移量"""
+            if not self.afk_config.get("鼠标抖动", True):
+                return current_drift
+
+            if self.afk_config.get("鼠标抖动锁定在窗口范围", True):
+                self.set_mouse_in_window()
+
+            dist_sq = current_drift[0]**2 + current_drift[1]**2
+
+            if dist_sq < 4:
+                target_x = random.choice([-3, -2, 2, 3])
+                target_y = random.choice([-3, -2, 2, 3])
+            else:
+                target_x = random.randint(-1, 1)
+                target_y = random.randint(-1, 1)
+
+            move_x = target_x - current_drift[0]
+            move_y = target_y - current_drift[1]
+
+            if move_x == 0 and move_y == 0:
+                move_x = 1 if random.random() > 0.5 else -1
+
+            self.genshin_interaction.do_move_mouse_relative(move_x, move_y)
+            
+            current_drift[0] += move_x
+            current_drift[1] += move_y
+            
+            return current_drift
+
+        def perform_random_key_press(key_list):
+            """执行随机按键，包含核心的防检测时间逻辑"""
+
+            key = random.choice(key_list)
+            
+            human_down_time = random.uniform(0.02, 0.09)
+            
+            magic_after_sleep = get_magic_sleep_time()
+
+            send_key_raw(key, True)
+            time.sleep(human_down_time)
+            send_key_raw(key, False)
+            
+            time.sleep(magic_after_sleep)
+
+        def smart_sleep(duration):
+            deadline = time.time() + duration
+            while time.time() < deadline:
+                if self.executor.current_task is None or self.executor.exit_event.is_set():
+                    return False
+
+                check_alt_logic()
+                time.sleep(0.1)
+            return True
+
+        def _fidget_worker():
             current_drift = [0, 0]
+
             spiral_key = self.get_spiral_dive_key()
             numeric_keys = [str(i) for i in range(1, 6) if str(i) != spiral_key][:4]
-            random_key = [self.key_config['Geniemon Key']] + numeric_keys
+            random_key_list = [self.key_config['Geniemon Key']] + numeric_keys
 
             if self.executor.current_task:
-                self.log_info("fidget action start")
+                self.log_info("fidget action started")
 
             while self.executor.current_task is not None and not self.executor.exit_event.is_set():
                 if self.executor.paused:
                     time.sleep(0.1)
                     continue
+
+                check_alt_logic()
+
+                current_drift = perform_mouse_jitter(current_drift)
+
+                perform_random_key_press(random_key_list)
+
+                long_sleep = random.choice([
+                    random.uniform(3.05, 3.20), # ~ 3.0 / 3.3
+                    random.uniform(4.25, 4.40), # ~ 4.2 / 4.5
+                    random.uniform(5.45, 5.60)  # ~ 5.4 / 5.7
+                ])
                 
-                check_alt()
-
-                key = random.choice(random_key)
-                down_time = random.uniform(0.02, 0.12)
-                after_sleep = random.uniform(0.08, 0.15)
-                send_key(key, down_time, after_sleep)
-
-                if self.afk_config.get("鼠标抖动", True):
-                    if self.afk_config.get("鼠标抖动锁定在窗口范围", True):
-                        self.set_mouse_in_window()
-
-                    dist_sq = current_drift[0]**2 + current_drift[1]**2
+                if not smart_sleep(long_sleep):
+                    break
                     
-                    if dist_sq < 4:
-                        target_x = random.choice([-3, -2, 2, 3])
-                        target_y = random.choice([-3, -2, 2, 3])
-                    else:
-                        target_x = random.randint(-1, 1)
-                        target_y = random.randint(-1, 1)
+            self.log_info("fidget action stopped")
 
-                    move_x = target_x - current_drift[0]
-                    move_y = target_y - current_drift[1]
-
-                    if move_x != 0 or move_y != 0:
-                        self.genshin_interaction.do_move_mouse_relative(move_x, move_y)
-                        current_drift[0] += move_x
-                        current_drift[1] += move_y
-
-                sleep(random.uniform(3.0, 6.0))
-
-        self.thread_pool_executor.submit(_fidget_action)
+        self.thread_pool_executor.submit(_fidget_worker)
 
 track_point_color = {
     "r": (121, 255),  # Red range
